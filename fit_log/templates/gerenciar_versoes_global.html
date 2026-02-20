@@ -1,0 +1,517 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    .versao-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid transparent;
+        margin-bottom: 20px;
+    }
+    
+    .versao-card.versao-atual {
+        border-left-color: #F28C33;
+        background-color: #f8fff8;
+    }
+    
+    .versao-card.versao-antiga {
+        border-left-color: #6c757d;
+        opacity: 0.9;
+    }
+    
+    .versao-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .badge-versao {
+        font-size: 0.9rem;
+        padding: 5px 10px;
+        border-radius: 20px;
+    }
+    
+    .data-badge {
+        background-color: #e9ecef;
+        padding: 3px 8px;
+        border-radius: 15px;
+        font-size: 0.85rem;
+    }
+    
+    .treino-badge {
+        background-color: #f8f9fa;
+        padding: 5px 10px;
+        border-radius: 5px;
+        margin-right: 5px;
+        margin-bottom: 5px;
+        display: inline-block;
+        border-left: 3px solid #F28C33;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .bg-version-current {
+    background: #F28C33 !important;
+}
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="bi bi-clock-history me-2" style="color: #F28C33;"></i>
+        Versões Globais dos Treinos
+    </h2>
+    
+    <div class="action-buttons">
+        <button type="button" class="btn" style="background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%); color: white; border: none;" 
+                data-bs-toggle="modal" data-bs-target="#modalNovaVersao">
+            <i class="bi bi-plus-circle"></i> Nova Versão
+        </button>
+        
+        <button type="button" class="btn btn-info text-white" 
+                data-bs-toggle="modal" data-bs-target="#modalNovoExercicio">
+            <i class="bi bi-database-add"></i> Novo Exercício
+        </button>
+    </div>
+</div>
+
+<!-- Modal Nova Versão -->
+<div class="modal fade" id="modalNovaVersao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%); color: white;">
+                <h5 class="modal-title">
+                    <i class="bi bi-plus-circle"></i> Nova Versão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('version.salvar_versao_global') }}" method="post">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Descrição</label>
+                        <input type="text" name="descricao" class="form-control" 
+                               placeholder="Ex: Versão Inicial 2024" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Data de Início</label>
+                        <input type="date" name="data_inicio" class="form-control" 
+                               value="{{ data_atual_iso() }}" required>
+                        <small class="text-muted">Formato: AAAA-MM-DD</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Data de Fim</label>
+                        <input type="date" name="data_fim" class="form-control">
+                        <small class="text-muted">Deixe em branco se for a versão atual</small>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 
+                        Após criar a versão, você poderá adicionar os treinos dentro dela.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn" style="background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%); color: white; border: none;">
+                        Criar Versão
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Novo Exercício -->
+<div class="modal fade" id="modalNovoExercicio" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background: #2D2D2D; color: white;">
+                <h5 class="modal-title">
+                    <i class="bi bi-database-add"></i> Novo Exercício
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('admin.salvar_exercicio') }}" method="post" id="formNovoExercicio">
+                <div class="modal-body">
+                    <ul class="nav nav-tabs mb-3" id="novoExercicioTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="selecionar-tab" data-bs-toggle="tab" data-bs-target="#selecionar" type="button" role="tab"
+                                    style="color: #F28C33 !important;">
+                                <i class="bi bi-search"></i> Selecionar do Catálogo
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="criar-tab" data-bs-toggle="tab" data-bs-target="#criar" type="button" role="tab"
+                                    style="color: #F28C33 !important;">
+                                <i class="bi bi-pencil"></i> Criar Manualmente
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="selecionar" role="tabpanel">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Buscar Exercício</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" id="buscaExercicio" class="form-control" 
+                                           placeholder="Digite para buscar exercícios..." autocomplete="off">
+                                </div>
+                                <small class="text-muted">Digite pelo menos 2 caracteres para buscar</small>
+                            </div>
+                            
+                            <div id="resultadosBusca" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 5px; padding: 10px; display: none;">
+                                <div class="list-group" id="listaResultados"></div>
+                            </div>
+                            
+                            <div class="mt-3" id="exercicioSelecionadoInfo" style="display: none;">
+                                <div class="alert alert-success">
+                                    <h6 class="alert-heading">Exercício Selecionado:</h6>
+                                    <p class="mb-1"><strong>Nome:</strong> <span id="selectedNome"></span></p>
+                                    <p class="mb-0"><strong>Músculo:</strong> <span id="selectedMusculo"></span></p>
+                                </div>
+                                <input type="hidden" id="selectedNomeInput" name="nome_catalogo">
+                                <input type="hidden" id="selectedMusculoInput" name="musculo_catalogo">
+                            </div>
+                        </div>
+                        
+                        <div class="tab-pane fade" id="criar" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-8 mb-3">
+                                    <label class="form-label fw-bold">Nome do Exercício</label>
+                                    <div class="input-group">
+                                        <input type="text" name="nome_manual" id="manual_nome" class="form-control" 
+                                               placeholder="Ex: Rosca direta">
+                                        <button type="button" class="btn btn-outline-primary" onclick="buscarMusculoManual()">
+                                            <i class="bi bi-search"></i> Buscar Músculo
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-bold">Músculo</label>
+                                    <select name="musculo_manual" id="manual_musculo" class="form-select">
+                                        <option value="">Selecione ou busque...</option>
+                                        {% for m in musculos %}
+                                        <option value="{{ m }}">{{ m }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="resultadoBuscaManual" class="mt-2" style="display: none;">
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i> <span id="mensagemBuscaManual"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="nome" id="final_nome">
+                    <input type="hidden" name="musculo" id="final_musculo">
+                    
+                    <div class="mb-3 mt-3">
+                        <label class="form-label fw-bold">Treino (opcional)</label>
+                        <select name="treino" id="novo_treino" class="form-select">
+                            <option value="">Não associar a nenhum treino</option>
+                            {% for t in treinos %}
+                            <option value="{{ t.id }}">{{ t.id }} - {{ t.descricao }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn" style="background: #2D2D2D; color: white; border: none;" onclick="return prepararEnvioNovo()">Salvar Exercício</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Versões -->
+<div class="row">
+    <div class="col-12">
+        {% if versoes %}
+            {% for v in versoes %}
+            {% set is_atual = v.data_fim is none %}
+            <div class="card versao-card {% if is_atual %}versao-atual{% else %}versao-antiga{% endif %}">
+                <div class="card-header {% if is_atual %}bg-version-current text-white{% else %}bg-light{% endif %}">   
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">
+                                <i class="bi bi-tag"></i> 
+                                Versão {{ v.versao }}: {{ v.descricao }}
+                            </h5>
+                            {% if is_atual %}
+                            <small class="text-white-50">
+                                <i class="bi bi-calendar-check"></i> Ativa desde {{ v.data_inicio_formatada }}
+                            </small>
+                            {% else %}
+                            <small class="text-muted">
+                                <i class="bi bi-calendar-range"></i> {{ v.data_inicio_formatada }} até {{ v.data_fim_formatada }}
+                            </small>
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if is_atual %}
+                            <span class="badge bg-white text-success me-2 badge-versao">
+                                <i class="bi bi-check-circle"></i> Atual
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary text-white me-2 badge-versao">
+                                <i class="bi bi-archive"></i> Arquivada
+                            </span>
+                            {% endif %}
+                            
+                            <div class="btn-group">
+                                <a href="{{ url_for('version.ver_versao', versao_id=v.id) }}" 
+                                   class="btn btn-sm" 
+                                   style="background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%); color: white; border: none;">
+                                    <i class="bi bi-pencil"></i> Editar
+                                </a>
+                                <a href="{{ url_for('version.clonar_versao_global', versao_id=v.id) }}" 
+                                   class="btn btn-sm btn-warning"
+                                   onclick="return confirm('Criar uma nova versão baseada nesta?')">
+                                    <i class="bi bi-copy"></i> Clonar
+                                </a>
+                                {% if is_atual %}
+                                <a href="{{ url_for('version.finalizar_versao_global', versao_id=v.id) }}" 
+                                   class="btn btn-sm btn-danger"
+                                   onclick="return confirm('Finalizar esta versão?')">
+                                    <i class="bi bi-calendar-x"></i> Finalizar
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!--
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <span class="data-badge">
+                                <i class="bi bi-calendar"></i> Início: {{ v.data_inicio_formatada }}
+                            </span>
+                        </div>
+                        <div class="col-md-6">
+                            <span class="data-badge">
+                                <i class="bi bi-calendar-x"></i> Fim: {{ v.data_fim_formatada or 'Atual' }}
+                            </span>
+                        </div>
+                    </div> -->
+                    
+                    <h6>
+                        <i class="bi bi-trophy" style="color: #F28C33;"></i> 
+                        Treinos ({{ v.treinos|length }})
+                    </h6>
+                    <div>
+                        {% for treino_id, treino in v.treinos.items() %}
+                        <div class="treino-badge">
+                            <strong>{{ treino_id }}</strong>: {{ treino.nome }}
+                     <!--       <span class="badge bg-secondary">{{ treino.exercicios|length }} ex.</span> -->
+                        </div>
+                        {% else %}
+                        <p class="text-muted">
+                            <i class="bi bi-info-circle"></i> 
+                            Nenhum treino cadastrado nesta versão.
+                        </p>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if v.treinos|length == 0 %}
+                    <a href="{{ url_for('version.novo_treino_na_versao', versao_id=v.id) }}" 
+                       class="btn btn-sm btn-outline-primary mt-2">
+                        <i class="bi bi-plus-circle"></i> Adicionar Treino
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 
+                Nenhuma versão cadastrada. 
+                <button class="btn btn-sm btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#modalNovaVersao">
+                    Criar Primeira Versão
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let buscaTimeout;
+    let todosResultados = [];
+    let resultadosExibidos = 50;
+    
+    document.getElementById('buscaExercicio')?.addEventListener('input', function() {
+        clearTimeout(buscaTimeout);
+        const termo = this.value.trim();
+        
+        if (termo.length < 2) {
+            document.getElementById('resultadosBusca').style.display = 'none';
+            return;
+        }
+        
+        const listaDiv = document.getElementById('listaResultados');
+        listaDiv.innerHTML = '<div class="list-group-item text-center"><div class="spinner-border spinner-border-sm"></div> Carregando...</div>';
+        document.getElementById('resultadosBusca').style.display = 'block';
+        
+        buscaTimeout = setTimeout(() => {
+            fetch(`/api/buscar-exercicios?termo=${encodeURIComponent(termo)}`)
+                .then(response => response.json())
+                .then(data => {
+                    todosResultados = data;
+                    resultadosExibidos = 50;
+                    exibirResultados();
+                })
+                .catch(error => {
+                    console.error('Erro na busca:', error);
+                    listaDiv.innerHTML = '<div class="list-group-item text-danger">Erro ao carregar resultados</div>';
+                });
+        }, 300);
+    });
+    
+    function exibirResultados() {
+        const listaDiv = document.getElementById('listaResultados');
+        listaDiv.innerHTML = '';
+        
+        const resultadosParaExibir = todosResultados.slice(0, resultadosExibidos);
+        
+        if (resultadosParaExibir.length === 0) {
+            listaDiv.innerHTML = '<div class="list-group-item text-muted">Nenhum exercício encontrado</div>';
+            return;
+        }
+        
+        resultadosParaExibir.forEach(ex => {
+            const item = document.createElement('a');
+            item.href = '#';
+            item.className = 'list-group-item list-group-item-action';
+            item.innerHTML = `<strong>${ex.nome}</strong><br><small class="text-muted">Músculo: ${ex.musculo}</small>`;
+            item.onclick = (e) => {
+                e.preventDefault();
+                selecionarExercicio(ex.nome, ex.musculo);
+            };
+            listaDiv.appendChild(item);
+        });
+        
+        if (todosResultados.length > resultadosExibidos) {
+            const contador = document.createElement('div');
+            contador.className = 'list-group-item text-muted text-center';
+            contador.innerHTML = `<small>${todosResultados.length - resultadosExibidos} resultados restantes. <a href="#" onclick="carregarMaisResultados(); return false;">Carregar mais</a></small>`;
+            listaDiv.appendChild(contador);
+        }
+    }
+    
+    function carregarMaisResultados() {
+        resultadosExibidos += 50;
+        exibirResultados();
+    }
+    
+    function selecionarExercicio(nome, musculo) {
+        if (!nome || !musculo) {
+            alert('Erro: Dados do exercício inválidos');
+            return;
+        }
+        document.getElementById('selectedNome').textContent = nome;
+        document.getElementById('selectedMusculo').textContent = musculo;
+        document.getElementById('selectedNomeInput').value = nome;
+        document.getElementById('selectedMusculoInput').value = musculo;
+        document.getElementById('exercicioSelecionadoInfo').style.display = 'block';
+        document.getElementById('resultadosBusca').style.display = 'none';
+        document.getElementById('buscaExercicio').value = '';
+    }
+    
+    function buscarMusculoManual() {
+        const nome = document.getElementById('manual_nome').value.trim();
+        const resultadoDiv = document.getElementById('resultadoBuscaManual');
+        const mensagemSpan = document.getElementById('mensagemBuscaManual');
+        const musculoSelect = document.getElementById('manual_musculo');
+        
+        if (!nome) {
+            alert('Digite o nome do exercício primeiro!');
+            return;
+        }
+        
+        mensagemSpan.innerHTML = 'Buscando... <span class="spinner-border spinner-border-sm"></span>';
+        resultadoDiv.style.display = 'block';
+        
+        fetch(`/api/buscar-musculo?nome=${encodeURIComponent(nome)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.encontrado) {
+                    mensagemSpan.innerHTML = `✅ Músculo encontrado: <strong>${data.musculo}</strong>`;
+                    
+                    let optionExists = false;
+                    for (let i = 0; i < musculoSelect.options.length; i++) {
+                        if (musculoSelect.options[i].value === data.musculo) {
+                            musculoSelect.selectedIndex = i;
+                            optionExists = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!optionExists) {
+                        const newOption = document.createElement('option');
+                        newOption.value = data.musculo;
+                        newOption.text = data.musculo;
+                        newOption.selected = true;
+                        musculoSelect.appendChild(newOption);
+                        mensagemSpan.innerHTML += `<br><small class="text-info">Músculo "${data.musculo}" adicionado à lista.</small>`;
+                    }
+                } else {
+                    mensagemSpan.innerHTML = `❌ ${data.mensagem}`;
+                }
+            })
+            .catch(error => {
+                mensagemSpan.innerHTML = '❌ Erro ao buscar. Tente novamente.';
+                console.error('Erro:', error);
+            });
+    }
+    
+    function prepararEnvioNovo() {
+        const activeTab = document.querySelector('#novoExercicioTabs .nav-link.active');
+        
+        if (activeTab && activeTab.id === 'selecionar-tab') {
+            const nome = document.getElementById('selectedNomeInput').value;
+            const musculo = document.getElementById('selectedMusculoInput').value;
+            
+            if (!nome) {
+                alert('Selecione um exercício do catálogo!');
+                return false;
+            }
+            
+            document.getElementById('final_nome').value = nome;
+            document.getElementById('final_musculo').value = musculo;
+            
+        } else {
+            const nome = document.getElementById('manual_nome').value.trim();
+            const musculo = document.getElementById('manual_musculo').value;
+            
+            if (!nome) {
+                alert('Digite o nome do exercício!');
+                return false;
+            }
+            
+            document.getElementById('final_nome').value = nome;
+            document.getElementById('final_musculo').value = musculo || '';
+        }
+        
+        return true;
+    }
+    
+    document.getElementById('modalNovoExercicio')?.addEventListener('show.bs.modal', function () {
+        document.getElementById('resultadosBusca').style.display = 'none';
+        document.getElementById('exercicioSelecionadoInfo').style.display = 'none';
+        document.getElementById('resultadoBuscaManual').style.display = 'none';
+        document.getElementById('buscaExercicio').value = '';
+        document.getElementById('manual_nome').value = '';
+        document.getElementById('manual_musculo').value = '';
+        document.getElementById('selectedNomeInput').value = '';
+        document.getElementById('selectedMusculoInput').value = '';
+        document.getElementById('final_nome').value = '';
+        document.getElementById('final_musculo').value = '';
+    });
+</script>
+{% endblock %}
