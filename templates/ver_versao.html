@@ -1,0 +1,468 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    .exercicio-item {
+        transition: all 0.2s;
+        border-left: 3px solid transparent;
+    }
+    .exercicio-item:hover {
+        background-color: #f8f9fa;
+        border-left-color: #F28C33;
+    }
+    .btn-remover-exercicio {
+        opacity: 0.3;
+        transition: opacity 0.2s;
+    }
+    .exercicio-item:hover .btn-remover-exercicio {
+        opacity: 1;
+    }
+    .drag-handle {
+        cursor: grab;
+        color: #aaa;
+        transition: color 0.2s;
+    }
+    .drag-handle:hover {
+        color: #F28C33;
+    }
+    .exercicio-item.dragging {
+        opacity: 0.5;
+        background-color: #e9ecef;
+    }
+    .edit-section {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+        border-left: 5px solid #F28C33;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="bi bi-pencil-square me-2" style="color: #F28C33;"></i>
+        Editar Versão {{ versao.versao }}: {{ versao.descricao }}
+    </h2>
+    <div>
+        <a href="{{ url_for('version.gerenciar_versoes_global') }}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+        <a href="{{ url_for('version.novo_treino_na_versao', versao_id=versao.id) }}" 
+           class="btn" style="background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%); color: white; border: none;">
+            <i class="bi bi-plus-circle"></i> Novo Treino
+        </a>
+    </div>
+</div>
+
+<!-- SEÇÃO DE EDIÇÃO DA VERSÃO -->
+<div class="edit-section">
+    <h5 class="mb-3">
+        <i class="bi bi-tag" style="color: #F28C33;"></i> 
+        Dados da Versão
+    </h5>
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <p><strong>Período:</strong> {{ versao.data_inicio_formatada }} até {{ versao.data_fim_formatada or 'Atual' }}</p>
+        </div>
+    </div>
+    <form method="post" action="{{ url_for('version.ver_versao', versao_id=versao.id) }}">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold">Descrição</label>
+                <input type="text" name="descricao" class="form-control" 
+                       value="{{ versao.descricao }}" required>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label fw-bold">Data de Início</label>
+                <input type="date" name="data_inicio" class="form-control" 
+                       value="{{ versao.data_inicio }}" required>
+                <small class="text-muted">Formato: AAAA-MM-DD</small>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label fw-bold">Data de Fim</label>
+                <input type="date" name="data_fim" class="form-control" 
+                       value="{{ versao.data_fim or '' }}">
+                <small class="text-muted">Deixe em branco se for a versão atual</small>
+            </div>
+        </div>
+        <div class="mt-2">
+            <button type="submit" class="btn" style="background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%); color: white; border: none;">
+                <i class="bi bi-save"></i> Salvar Alterações da Versão
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Informações da Versão (resumo) -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted">Período</h6>
+                <h5>{{ versao.data_inicio_formatada }} até {{ versao.data_fim_formatada or 'Atual' }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted">Total de Treinos</h6>
+                <h5>{{ versao.treinos|length }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted">Total de Exercícios</h6>
+                <h5>
+                    {% set total = namespace(value=0) %}
+                    {% for t in versao.treinos.values() %}
+                        {% set total.value = total.value + t.exercicios|length %}
+                    {% endfor %}
+                    {{ total.value }}
+                </h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Treinos -->
+<div class="row">
+    {% for treino_id, treino in versao.treinos.items() %}
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <span class="badge me-2" style="background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%);">
+                        {{ treino_id }}
+                    </span>
+                    {{ treino.nome }}
+                </h5>
+                <div class="btn-group">
+                    <a href="{{ url_for('version.editar_treino_na_versao', versao_id=versao.id, treino_id=treino_id) }}" 
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <a href="{{ url_for('version.excluir_treino_da_versao', versao_id=versao.id, treino_id=treino_id) }}" 
+                       class="btn btn-sm btn-outline-danger"
+                       onclick="return confirm('Remover este treino da versão?')">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">{{ treino.descricao }}</p>
+                                
+                <div class="list-group list-group-flush exercicios-container" id="exercicios-{{ treino_id }}" data-treino-id="{{ treino_id }}">
+                    {% for ex_id in treino.exercicios %}
+                        {% set exercicio = exercicios|selectattr('id', 'equalto', ex_id)|first %}
+                        {% if exercicio %}
+                        <div class="list-group-item exercicio-item d-flex justify-content-between align-items-center" 
+                             data-exercicio-id="{{ ex_id }}">
+                            <div class="d-flex align-items-center flex-grow-1">
+                                <i class="bi bi-grip-vertical drag-handle me-2"></i>
+                                <div>
+                                    <strong>{{ exercicio.nome }}</strong>
+                                    <br><small class="text-muted">{{ exercicio.musculo }}</small>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-link text-danger btn-remover-exercicio" 
+                                    onclick="removerExercicio({{ versao.id }}, '{{ treino_id }}', {{ ex_id }})">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                
+                <button class="btn btn-sm btn-outline-primary mt-3" 
+                        onclick="abrirModalAdicionar({{ versao.id }}, '{{ treino_id }}')">
+                    <i class="bi bi-plus-circle"></i> Adicionar Exercício
+                </button>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> 
+            Nenhum treino cadastrado nesta versão.
+            <a href="{{ url_for('version.novo_treino_na_versao', versao_id=versao.id) }}" class="alert-link">
+                Criar primeiro treino
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal para Adicionar Exercício -->
+<div class="modal fade" id="modalAdicionarExercicio" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%); color: white;">
+                <h5 class="modal-title">
+                    <i class="bi bi-plus-circle"></i> Adicionar Exercício ao Treino
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modal_versao_id">
+                <input type="hidden" id="modal_treino_id">
+                
+                <ul class="nav nav-tabs mb-3" id="adicionarExercicioTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="existente-tab" data-bs-toggle="tab" 
+                                data-bs-target="#existente" type="button" role="tab"
+                                style="color: #F28C33 !important;">
+                            <i class="bi bi-search"></i> Exercícios Existentes
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="novo-exercicio-tab" data-bs-toggle="tab" 
+                                data-bs-target="#novo-exercicio" type="button" role="tab"
+                                style="color: #F28C33 !important;">
+                            <i class="bi bi-plus-circle"></i> Criar Novo Exercício
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="existente" role="tabpanel">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Buscar por nome ou músculo</label>
+                            <input type="text" id="buscaExercicio" class="form-control" 
+                                   placeholder="Digite para buscar..." autocomplete="off">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Filtrar por músculo</label>
+                            <select id="filtroMusculo" class="form-select">
+                                <option value="">Todos os músculos</option>
+                                {% for m in musculos %}
+                                <option value="{{ m }}">{{ m }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div id="resultadosBusca" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 5px;">
+                            <div class="text-center p-3 text-muted">
+                                Digite para buscar exercícios
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="novo-exercicio" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label fw-bold">Nome do Exercício</label>
+                                <input type="text" id="novo_exercicio_nome" class="form-control" 
+                                       placeholder="Ex: Rosca direta" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Músculo</label>
+                                <input type="text" id="novo_exercicio_musculo" class="form-control" 
+                                       placeholder="Ex: biceps" list="musculos-sugeridos">
+                                <datalist id="musculos-sugeridos">
+                                    {% for m in musculos %}
+                                    <option value="{{ m }}">
+                                    {% endfor %}
+                                </datalist>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Treino base (opcional)</label>
+                            <select id="novo_exercicio_treino" class="form-select">
+                                <option value="">Não definir</option>
+                                {% for t in treinos %}
+                                <option value="{{ t.id }}">{{ t.id }} - {{ t.descricao }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Apenas para organização, não afeta a versão atual</small>
+                        </div>
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-success" onclick="criarEAdicionarExercicio()">
+                                <i class="bi bi-check-circle"></i> Criar e Adicionar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+    let versaoAtual, treinoAtual;
+    let todosExercicios = [];
+    let buscaTimeout;
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        {% for treino_id in versao.treinos.keys() %}
+            const container = document.getElementById('exercicios-{{ treino_id }}');
+            if (container) {
+                new Sortable(container, {
+                    animation: 150,
+                    handle: '.drag-handle',
+                    onEnd: function(evt) {
+                        const novaOrdem = Array.from(container.children).map(
+                            item => parseInt(item.dataset.exercicioId)
+                        );
+                        
+                        fetch(`/versao/{{ versao.id }}/treino/{{ treino_id }}/reordenar`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({nova_ordem: novaOrdem})
+                        });
+                    }
+                });
+            }
+        {% endfor %}
+    });
+    
+    function abrirModalAdicionar(versaoId, treinoId) {
+        versaoAtual = versaoId;
+        treinoAtual = treinoId;
+        
+        document.getElementById('modal_versao_id').value = versaoId;
+        document.getElementById('modal_treino_id').value = treinoId;
+        
+        document.getElementById('buscaExercicio').value = '';
+        document.getElementById('filtroMusculo').value = '';
+        document.getElementById('resultadosBusca').innerHTML = '<div class="text-center p-3 text-muted">Digite para buscar exercícios</div>';
+        
+        var modal = new bootstrap.Modal(document.getElementById('modalAdicionarExercicio'));
+        modal.show();
+    }
+    
+    document.getElementById('buscaExercicio')?.addEventListener('input', function() {
+        clearTimeout(buscaTimeout);
+        const termo = this.value.trim();
+        const musculo = document.getElementById('filtroMusculo').value;
+        
+        if (termo.length < 2 && !musculo) {
+            document.getElementById('resultadosBusca').innerHTML = '<div class="text-center p-3 text-muted">Digite para buscar exercícios</div>';
+            return;
+        }
+        
+        buscaTimeout = setTimeout(() => {
+            let url = `/api/buscar-exercicios?termo=${encodeURIComponent(termo)}`;
+            if (musculo) {
+                url += `&musculo=${encodeURIComponent(musculo)}`;
+            }
+            
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    todosExercicios = data;
+                    exibirResultados();
+                });
+        }, 300);
+    });
+    
+    document.getElementById('filtroMusculo')?.addEventListener('change', function() {
+        const termo = document.getElementById('buscaExercicio').value.trim();
+        if (termo.length >= 2 || this.value) {
+            document.getElementById('buscaExercicio').dispatchEvent(new Event('input'));
+        }
+    });
+    
+    function exibirResultados() {
+        const div = document.getElementById('resultadosBusca');
+        
+        if (todosExercicios.length === 0) {
+            div.innerHTML = '<div class="text-center p-3 text-muted">Nenhum exercício encontrado</div>';
+            return;
+        }
+        
+        div.innerHTML = todosExercicios.map(ex => `
+            <div class="card mb-2" style="cursor: pointer;" 
+                 onclick="adicionarExercicioExistente(${ex.id})">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${ex.nome}</strong>
+                            <br><small class="text-muted">${ex.musculo}</small>
+                        </div>
+                        <i class="bi bi-plus-circle text-success"></i>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function adicionarExercicioExistente(exercicioId) {
+        fetch(`/versao/${versaoAtual}/treino/${treinoAtual}/exercicio/adicionar`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({exercicio_id: exercicioId})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro ao adicionar exercício');
+            }
+        });
+    }
+    
+    function criarEAdicionarExercicio() {
+        const nome = document.getElementById('novo_exercicio_nome').value.trim();
+        const musculo = document.getElementById('novo_exercicio_musculo').value.trim();
+        const treinoBase = document.getElementById('novo_exercicio_treino').value;
+        
+        if (!nome) {
+            alert('Digite o nome do exercício!');
+            return;
+        }
+        
+        fetch('/api/criar-exercicio', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                nome: nome,
+                musculo: musculo || 'Outros',
+                treino: treinoBase || null
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                return fetch(`/versao/${versaoAtual}/treino/${treinoAtual}/exercicio/adicionar`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({exercicio_id: data.id})
+                });
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        });
+    }
+    
+    function removerExercicio(versaoId, treinoId, exercicioId) {
+        if (confirm('Remover este exercício do treino?')) {
+            fetch(`/versao/${versaoId}/treino/${treinoId}/exercicio/${exercicioId}/remover`, {
+                method: 'POST'
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+        }
+    }
+</script>
+{% endblock %}
