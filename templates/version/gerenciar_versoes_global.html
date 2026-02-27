@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .versao-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid transparent;
+        margin-bottom: 20px;
+    }
+    
+    .versao-card.versao-atual {
+        border-left-color: #F28C33;
+        background-color: #f8fff8;
+    }
+    
+    .versao-card.versao-antiga {
+        border-left-color: #6c757d;
+        opacity: 0.9;
+    }
+    
+    .versao-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .badge-versao {
+        font-size: 0.9rem;
+        padding: 5px 10px;
+        border-radius: 20px;
+    }
+    
+    .divisao-badge {
+        font-size: 1rem;
+        padding: 5px 15px;
+        border-radius: 25px;
+        background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%);
+        color: white;
+        font-weight: bold;
+    }
+    
+    .treino-badge {
+        background-color: #f8f9fa;
+        padding: 8px 12px;
+        border-radius: 5px;
+        margin-right: 5px;
+        margin-bottom: 5px;
+        display: inline-block;
+        border-left: 3px solid #F28C33;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .progresso-divisao {
+        width: 100px;
+        height: 6px;
+        background-color: #e9ecef;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-left: 10px;
+        display: inline-block;
+    }
+    
+    .progresso-divisao-bar {
+        height: 100%;
+        background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%);
+        border-radius: 3px;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="bi bi-clock-history me-2" style="color: #F28C33;"></i>
+        Versões Globais dos Treinos
+    </h2>
+    
+    <div class="action-buttons">
+        <button type="button" class="btn" style="background: linear-gradient(135deg, #FFB366 0%, #F28C33 100%); color: white; border: none;" 
+                data-bs-toggle="modal" data-bs-target="#modalNovaVersao">
+            <i class="bi bi-plus-circle"></i> Nova Versão
+        </button>
+        <button type="button" class="btn" style="background: #F28C33; color: white; border: none;" 
+                data-bs-toggle="modal" data-bs-target="#modalNovoTreinoGlobal">
+            <i class="bi bi-trophy"></i> Novo Treino
+        </button>
+        <button type="button" class="btn" style="background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%); color: white; border: none;" 
+                data-bs-toggle="modal" data-bs-target="#modalNovoExercicio">
+            <i class="bi bi-database-add"></i> Novo Exercício
+        </button>
+    </div>
+</div>
+
+<!-- Modal Nova Versão - COM CAMPO DIVISÃO -->
+<div class="modal fade" id="modalNovaVersao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%); color: white;">
+                <h5 class="modal-title">
+                    <i class="bi bi-plus-circle"></i> Nova Versão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('version.salvar_versao_global') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Descrição</label>
+                        <input type="text" name="descricao" class="form-control" 
+                               placeholder="Ex: Versão Inicial 2024" required>
+                    </div>
+                    
+                    <!-- CAMPO DIVISÃO -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Divisão (Split)</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="divisao" id="divisaoABC" value="ABC" checked>
+                            <label class="btn btn-outline-primary" for="divisaoABC">
+                                <i class="bi bi-123"></i> ABC (3 treinos)
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="divisao" id="divisaoABCD" value="ABCD">
+                            <label class="btn btn-outline-primary" for="divisaoABCD">
+                                <i class="bi bi-123"></i> ABCD (4 treinos)
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="divisao" id="divisaoABCDE" value="ABCDE">
+                            <label class="btn btn-outline-primary" for="divisaoABCDE">
+                                <i class="bi bi-123"></i> ABCDE (5 treinos)
+                            </label>
+                        </div>
+                        <small class="text-muted">Escolha quantos treinos diferentes esta versão terá</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Data de Início</label>
+                        <input type="date" name="data_inicio" class="form-control" 
+                               value="{{ data_atual_iso() }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Data de Fim</label>
+                        <input type="date" name="data_fim" class="form-control">
+                        <small class="text-muted">Deixe em branco se for a versão atual</small>
+                    </div>
+                    <div class="alert alert-info" id="infoDivisao">
+                        <i class="bi bi-info-circle"></i> 
+                        <span id="infoDivisaoTexto">Versão com 3 treinos (A, B, C)</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn" style="background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%); color: white; border: none;">
+                        <i class="bi bi-save"></i> Criar Versão
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Novo Treino Global -->
+<div class="modal fade" id="modalNovoTreinoGlobal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: #F28C33; color: white;">
+                <h5 class="modal-title">
+                    <i class="bi bi-trophy"></i> Novo Treino
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">ID do Treino</label>
+                    <input type="text" id="novo_treino_id" class="form-control" 
+                           placeholder="Ex: F, G, H..." maxlength="1" required>
+                    <div class="form-text">Uma única letra maiúscula</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nome do Treino</label>
+                    <input type="text" id="novo_treino_nome" class="form-control" 
+                           placeholder="Ex: Treino de Costas" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Descrição</label>
+                    <input type="text" id="novo_treino_descricao" class="form-control" 
+                           placeholder="Ex: Foco em dorsais" required>
+                </div>
+                <div id="novo_treino_alerta" class="alert alert-danger" style="display: none;"></div>
+                <div id="novo_treino_sucesso" class="alert alert-success" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn" style="background: #F28C33; color: white; border: none;" 
+                        onclick="VersoesManager.criarTreinoViaAPI()">
+                    <i class="bi bi-save"></i> Salvar Treino
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Versões -->
+<div class="row">
+    <div class="col-12">
+        {% if versoes %}
+            {% for v in versoes %}
+            {% set is_atual = v.data_fim is none %}
+            {% set total_treinos = v.treinos|length %}
+            {% set max_treinos = 3 if v.divisao == 'ABC' else 4 if v.divisao == 'ABCD' else 5 %}
+            {% set percentual = (total_treinos / max_treinos * 100) if max_treinos > 0 else 0 %}
+            
+            <div class="card versao-card {% if is_atual %}versao-atual{% else %}versao-antiga{% endif %}">
+                <div class="card-header {% if is_atual %}bg-primary text-white{% else %}bg-light{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <div>
+                            <h5 class="mb-1">
+                                <i class="bi bi-tag"></i> 
+                                Versão {{ v.versao }}: {{ v.descricao }}
+                            </h5>
+                            <div class="d-flex align-items-center mt-1">
+                                <span class="divisao-badge me-3">
+                                    <i class="bi bi-grid-3x3-gap-fill"></i> {{ v.divisao }}
+                                </span>
+                                <div class="d-flex align-items-center">
+                                    <span class="text-{% if is_atual %}white-50{% else %}muted{% endif %} me-2">
+                                        <i class="bi bi-trophy"></i> {{ total_treinos }}/{{ max_treinos }} treinos
+                                    </span>
+                                    <div class="progresso-divisao">
+                                        <div class="progresso-divisao-bar" style="width: {{ percentual }}%;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% if is_atual %}
+                            <small class="text-white-50">
+                                <i class="bi bi-calendar-check"></i> Ativa desde {{ v.data_inicio_formatada }}
+                            </small>
+                            {% else %}
+                            <small class="text-muted">
+                                <i class="bi bi-calendar-range"></i> {{ v.data_inicio_formatada }} até {{ v.data_fim_formatada }}
+                            </small>
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if is_atual %}
+                            <span class="badge bg-white text-success me-2 badge-versao">
+                                <i class="bi bi-check-circle"></i> Atual
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary text-white me-2 badge-versao">
+                                <i class="bi bi-archive"></i> Arquivada
+                            </span>
+                            {% endif %}
+                            
+                            <div class="btn-group">
+                                <a href="{{ url_for('version.ver_versao', versao_id=v.id) }}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-pencil"></i> Editar
+                                </a>
+                                <a href="{{ url_for('version.clonar_versao_global', versao_id=v.id) }}" 
+                                   class="btn btn-sm btn-outline-warning"
+                                   onclick="return confirm('Criar uma nova versão baseada nesta?')">
+                                    <i class="bi bi-copy"></i> Clonar
+                                </a>
+                                {% if is_atual %}
+                                <a href="{{ url_for('version.finalizar_versao_global', versao_id=v.id) }}" 
+                                   class="btn btn-sm btn-danger"
+                                   onclick="return confirm('Finalizar esta versão?')">
+                                    <i class="bi bi-calendar-x"></i> Finalizar
+                                </a>
+                                {% else %}
+                                <a href="{{ url_for('version.excluir_versao_global', versao_id=v.id, confirmar='true') }}" 
+                                   class="btn btn-sm btn-outline-danger"
+                                   onclick="return confirm('Tem certeza que deseja excluir esta versão permanentemente?')">
+                                    <i class="bi bi-trash"></i> Excluir
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h6>
+                        <i class="bi bi-trophy" style="color: #F28C33;"></i> 
+                        Treinos ({{ total_treinos }}/{{ max_treinos }})
+                    </h6>
+                    <div>
+                        {% for treino_id, treino in v.treinos.items() %}
+                        <div class="treino-badge">
+                            <strong>{{ treino_id }}</strong>: {{ treino.nome }}
+                            <span class="badge bg-secondary">{{ treino.exercicios|length }} ex</span>
+                        </div>
+                        {% else %}
+                        <p class="text-muted">
+                            <i class="bi bi-info-circle"></i> 
+                            Nenhum treino cadastrado nesta versão.
+                        </p>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if total_treinos < max_treinos %}
+                    <a href="{{ url_for('version.ver_versao', versao_id=v.id) }}"
+                       class="btn btn-sm btn-outline-primary mt-2">
+                        <i class="bi bi-plus-circle"></i> Adicionar Treinos ({{ max_treinos - total_treinos }} restantes)
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 
+                Nenhuma versão cadastrada. 
+                <button class="btn btn-sm btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#modalNovaVersao">
+                    Criar Primeira Versão
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Script para atualizar informação da divisão no modal -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const radios = document.querySelectorAll('input[name="divisao"]');
+        const infoTexto = document.getElementById('infoDivisaoTexto');
+        
+        function atualizarInfoDivisao() {
+            const divisaoSelecionada = document.querySelector('input[name="divisao"]:checked')?.value || 'ABC';
+            const numTreinos = divisaoSelecionada === 'ABC' ? 3 : divisaoSelecionada === 'ABCD' ? 4 : 5;
+            const letras = divisaoSelecionada.split('');
+            infoTexto.textContent = `Versão com ${numTreinos} treinos (${letras.join(', ')})`;
+        }
+        
+        radios.forEach(radio => {
+            radio.addEventListener('change', atualizarInfoDivisao);
+        });
+        
+        atualizarInfoDivisao();
+    });
+</script>
+{% endblock %}

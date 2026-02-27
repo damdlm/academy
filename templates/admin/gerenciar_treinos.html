@@ -1,0 +1,474 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">
+        <i class="bi bi-gear-fill me-2" style="color: #F28C33;"></i>
+        Gerenciar Catálogo de Exercícios
+    </h2>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn" style="background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%); color: white; border: none;" 
+                data-bs-toggle="modal" data-bs-target="#modalNovoTreino">
+            <i class="bi bi-plus-circle"></i> Novo Treino
+        </button>
+        <button type="button" class="btn" style="background: #2D2D2D; color: white; border: none;" 
+                data-bs-toggle="modal" data-bs-target="#modalNovoExercicio">
+            <i class="bi bi-database-add"></i> Novo Exercício
+        </button>
+    </div>
+</div>
+
+<!-- Modal Novo Treino -->
+<div class="modal fade" id="modalNovoTreino" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%); color: white;">
+                <h5 class="modal-title">
+                    <i class="bi bi-plus-circle"></i> Novo Treino
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('admin.salvar_treino') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">ID do Treino</label>
+                        <input type="text" name="id" class="form-control" 
+                               placeholder="Ex: F, G, H..." maxlength="1" required>
+                        <div class="form-text">Uma única letra maiúscula</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nome do Treino</label>
+                        <input type="text" name="nome" class="form-control" 
+                               placeholder="Ex: Treino de Costas" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Descrição</label>
+                        <input type="text" name="descricao" class="form-control" 
+                               placeholder="Ex: Foco em dorsais" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn" style="background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%); color: white; border: none;">
+                        Salvar Treino
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Treinos -->
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-trophy" style="color: #F28C33;"></i> Treinos
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for t in treinos %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge me-2" style="background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%); color: white;">
+                                {{ t.codigo }}
+                            </span>
+                            <strong>{{ t.nome }}</strong>
+                        </div>
+                        <div class="btn-group">
+                            <a href="{{ url_for('version.gerenciar_versoes_global') }}" 
+                               class="btn btn-sm btn-info" 
+                               style="background: #17a2b8; color: white; border: none;">
+                                <i class="bi bi-clock-history"></i>
+                            </a>
+                            <button class="btn btn-sm" style="background: linear-gradient(135deg, #FFB366 0%, #F28C33 100%); color: white; border: none;" 
+                                    onclick="GerenciarTreinos.editarTreino('{{ t.id }}', '{{ t.codigo }}', '{{ t.nome }}', '{{ t.descricao }}')">
+                                <i class="bi bi-pencil"></i>
+                            </button>					
+                            <button class="btn btn-sm btn-danger" 
+                                    onclick="GerenciarTreinos.confirmarExclusaoTreino('{{ t.id }}', '{{ t.codigo }} - {{ t.nome }}')">
+                                <i class="bi bi-trash"></i>
+                            </button>					
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Lista de Exercícios (simplificada) -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-check" style="color: #F28C33;"></i> Exercícios
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs mb-3" id="exercicioTabs">
+                    {% for t in treinos %}
+                    <li class="nav-item">
+                        <button class="nav-link {% if loop.first %}active{% endif %}" 
+                                data-bs-toggle="tab" data-bs-target="#treino{{ t.id }}">
+                            Treino {{ t.codigo }}
+                        </button>
+                    </li>
+                    {% endfor %}
+                </ul> 
+                <div class="tab-content">
+                    {% for t in treinos %}
+                    <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="treino{{ t.id }}">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Exercício</th>
+                                        <th>Músculo</th>
+                                        <th>Última Carga</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for ex in exercicios if ex.treino_id == t.id %}
+                                    <tr>
+                                        <td>{{ ex.nome }}</td>
+                                        <td>{{ ex.musculo_ref.nome_exibicao if ex.musculo_ref else 'N/A' }}</td>
+                                        <td>
+                                            {% set ultima = ultimas_cargas.get(ex.id) %}
+                                            {% if ultima %}
+                                                <span class="badge bg-secondary">{{ ultima }}kg</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a href="{{ url_for('admin.exercicio_detalhes', exercicio_id=ex.id) }}" 
+                                                   class="btn btn-sm btn-info"
+                                                   style="background: #17a2b8; color: white; border: none;">
+                                                    <i class="bi bi-info-circle"></i>
+                                                </a>
+                                                <button class="btn btn-sm" style="background: linear-gradient(135deg, #FFB366 0%, #F28C33 100%); color: white; border: none;" 
+                                                        onclick="GerenciarTreinos.editarExercicio({{ ex.id }}, '{{ ex.nome }}', '{{ ex.musculo_ref.nome_exibicao if ex.musculo_ref else '' }}', '{{ ex.treino_id }}')">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-danger" 
+                                                        onclick="GerenciarTreinos.confirmarExclusaoExercicio({{ ex.id }}, '{{ ex.nome }}')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Treino -->
+<div class="modal fade" id="modalEditarTreino" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #FFB366 0%, #F28C33 100%); color: white;">
+                <h5 class="modal-title">
+                    <i class="bi bi-pencil-square"></i> Editar Treino
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('admin.editar_treino') }}" method="post" id="formEditarTreino">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <input type="hidden" name="id_original" id="edit_treino_id_original">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">ID do Treino</label>
+                        <input type="text" name="id" id="edit_treino_id" class="form-control" 
+                               maxlength="1" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nome do Treino</label>
+                        <input type="text" name="nome" id="edit_treino_nome" class="form-control" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Descrição</label>
+                        <input type="text" name="descricao" id="edit_treino_descricao" class="form-control" required>
+                    </div>
+                    
+                    <div class="alert alert-warning" id="edit_treino_alerta" style="display: none;">
+                        <i class="bi bi-exclamation-triangle"></i> 
+                        <span id="edit_treino_mensagem"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn" style="background: linear-gradient(135deg, #FFB366 0%, #F28C33 100%); color: white; border: none;">
+                        Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Inicializar módulos quando a página carregar
+    document.addEventListener('DOMContentLoaded', function() {
+        // Verificar disponibilidade dos módulos
+        if (typeof GerenciarTreinos === 'undefined') {
+            console.error('Módulo GerenciarTreinos não carregado');
+        }
+    });
+</script>
+
+<!-- ===== MODAL NOVO EXERCÍCIO ===== -->
+<div class="modal fade" id="modalNovoExercicio" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background: #2D2D2D; color: white;">
+                <h5 class="modal-title">
+                    <i class="bi bi-database-add"></i> Novo Exercício
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('admin.salvar_exercicio') }}" method="post" id="formNovoExercicio">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <!-- Abas -->
+                    <ul class="nav nav-tabs mb-3" id="novoExercicioTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="selecionar-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#selecionar" type="button" role="tab"
+                                    style="color: #F28C33 !important;">
+                                <i class="bi bi-search"></i> Selecionar do Catálogo
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="criar-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#criar" type="button" role="tab"
+                                    style="color: #F28C33 !important;">
+                                <i class="bi bi-pencil"></i> Criar Manualmente
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content">
+                        <!-- Aba de Seleção do Catálogo -->
+                        <div class="tab-pane fade show active" id="selecionar" role="tabpanel">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Buscar Exercício</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" id="buscaExercicio" class="form-control" 
+                                           placeholder="Digite para buscar exercícios..." autocomplete="off">
+                                </div>
+                                <small class="text-muted">Digite pelo menos 2 caracteres para buscar</small>
+                            </div>
+                            
+                            <div id="resultadosBusca" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 5px; padding: 10px; display: none;">
+                                <div class="list-group" id="listaResultados"></div>
+                            </div>
+                            
+                            <div class="mt-3" id="exercicioSelecionadoInfo" style="display: none;">
+                                <div class="alert alert-success">
+                                    <h6 class="alert-heading">Exercício Selecionado:</h6>
+                                    <p class="mb-1"><strong>Nome:</strong> <span id="selectedNome"></span></p>
+                                    <p class="mb-0"><strong>Músculo:</strong> <span id="selectedMusculo"></span></p>
+                                </div>
+                                <input type="hidden" id="selectedNomeInput" name="nome_catalogo">
+                                <input type="hidden" id="selectedMusculoInput" name="musculo_catalogo">
+                            </div>
+                        </div>
+                        
+                        <!-- Aba de Criação Manual -->
+                        <div class="tab-pane fade" id="criar" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-8 mb-3">
+                                    <label class="form-label fw-bold">Nome do Exercício</label>
+                                    <div class="input-group">
+                                        <input type="text" name="nome_manual" id="manual_nome" class="form-control" 
+                                               placeholder="Ex: Rosca direta">
+                                        <button type="button" class="btn btn-outline-primary" onclick="buscarMusculoManual()">
+                                            <i class="bi bi-search"></i> Buscar Músculo
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-bold">Músculo</label>
+                                    <select name="musculo_manual" id="manual_musculo" class="form-select">
+                                        <option value="">Selecione ou busque...</option>
+                                        {% for m in musculos %}
+                                        <option value="{{ m }}">{{ m }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Descrição (opcional)</label>
+                                <textarea name="descricao_manual" id="manual_descricao" class="form-control" 
+                                          rows="2" placeholder="Ex: Foco na parte inferior"></textarea>
+                            </div>
+                            <div id="resultadoBuscaManual" class="mt-2" style="display: none;">
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i> <span id="mensagemBuscaManual"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="nome" id="final_nome">
+                    <input type="hidden" name="musculo" id="final_musculo">
+                    
+                    <div class="mb-3 mt-3">
+                        <label class="form-label fw-bold">Treino (opcional)</label>
+                        <select name="treino" class="form-select">
+                            <option value="">Não associar a nenhum treino</option>
+                            {% for t in treinos %}
+                            <option value="{{ t.id }}">{{ t.codigo }} - {{ t.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn" style="background: #2D2D2D; color: white; border: none;" onclick="return prepararEnvioNovoExercicio()">
+                        <i class="bi bi-save"></i> Salvar Exercício
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function prepararEnvioNovoExercicio() {
+    const activeTab = document.querySelector('#novoExercicioTabs .nav-link.active');
+    
+    if (activeTab && activeTab.id === 'selecionar-tab') {
+        const nome = document.getElementById('selectedNomeInput').value;
+        if (!nome) {
+            alert('Selecione um exercício do catálogo!');
+            return false;
+        }
+        document.getElementById('final_nome').value = nome;
+        document.getElementById('final_musculo').value = document.getElementById('selectedMusculoInput').value;
+    } else {
+        const nome = document.getElementById('manual_nome').value.trim();
+        if (!nome) {
+            alert('Digite o nome do exercício!');
+            return false;
+        }
+        document.getElementById('final_nome').value = nome;
+        document.getElementById('final_musculo').value = document.getElementById('manual_musculo').value || 'Outros';
+    }
+    return true;
+}
+
+function buscarMusculoManual() {
+    const nome = document.getElementById('manual_nome').value.trim();
+    if (!nome) {
+        alert('Digite o nome do exercício primeiro!');
+        return;
+    }
+    
+    fetch(`/api/buscar-musculo?nome=${encodeURIComponent(nome)}`)
+        .then(r => r.json())
+        .then(data => {
+            const div = document.getElementById('resultadoBuscaManual');
+            const msg = document.getElementById('mensagemBuscaManual');
+            
+            if (data.encontrado) {
+                const select = document.getElementById('manual_musculo');
+                for (let i = 0; i < select.options.length; i++) {
+                    if (select.options[i].value === data.musculo) {
+                        select.selectedIndex = i;
+                        break;
+                    }
+                }
+                msg.innerHTML = `✅ Músculo encontrado: ${data.musculo}`;
+                div.style.display = 'block';
+                div.className = 'alert alert-success mt-2';
+            } else {
+                msg.innerHTML = '❌ Músculo não encontrado no catálogo';
+                div.style.display = 'block';
+                div.className = 'alert alert-warning mt-2';
+            }
+        });
+}
+
+// Inicializar busca de exercícios quando o modal abrir
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('modalNovoExercicio');
+    if (modal) {
+        modal.addEventListener('shown.bs.modal', function () {
+            const input = document.getElementById('buscaExercicio');
+            if (input) {
+                input.value = '';
+                input.focus();
+                
+                // Remover listener anterior para não duplicar
+                const newInput = input.cloneNode(true);
+                input.parentNode.replaceChild(newInput, input);
+                
+                newInput.addEventListener('input', function() {
+                    const termo = this.value.trim();
+                    if (termo.length < 2) {
+                        document.getElementById('resultadosBusca').style.display = 'none';
+                        return;
+                    }
+                    
+                    clearTimeout(window.buscaTimeout);
+                    window.buscaTimeout = setTimeout(() => {
+                        fetch(`/api/buscar-exercicios?termo=${encodeURIComponent(termo)}`)
+                            .then(r => r.json())
+                            .then(data => {
+                                const lista = document.getElementById('listaResultados');
+                                const resultadosDiv = document.getElementById('resultadosBusca');
+                                lista.innerHTML = '';
+                                
+                                if (data.length === 0) {
+                                    lista.innerHTML = '<div class="list-group-item text-muted">Nenhum exercício encontrado</div>';
+                                } else {
+                                    data.forEach(ex => {
+                                        const item = document.createElement('a');
+                                        item.href = '#';
+                                        item.className = 'list-group-item list-group-item-action';
+                                        item.innerHTML = `<strong>${ex.nome}</strong><br><small class="text-muted">Músculo: ${ex.musculo}</small>`;
+                                        item.onclick = (e) => {
+                                            e.preventDefault();
+                                            document.getElementById('selectedNome').textContent = ex.nome;
+                                            document.getElementById('selectedMusculo').textContent = ex.musculo;
+                                            document.getElementById('selectedNomeInput').value = ex.nome;
+                                            document.getElementById('selectedMusculoInput').value = ex.musculo;
+                                            document.getElementById('exercicioSelecionadoInfo').style.display = 'block';
+                                            resultadosDiv.style.display = 'none';
+                                        };
+                                        lista.appendChild(item);
+                                    });
+                                }
+                                resultadosDiv.style.display = 'block';
+                            });
+                    }, 300);
+                });
+            }
+        });
+    }
+});
+</script>
+
+{% endblock %}

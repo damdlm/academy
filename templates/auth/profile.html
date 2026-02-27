@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h4 class="mb-0" style="color: #F28C33;">
+                    <i class="bi bi-person-circle"></i> Meu Perfil
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center mb-3">
+                        <i class="bi bi-person-circle" style="font-size: 80px; color: #F28C33;"></i>
+                        <h5 class="mt-2">{{ user.username }}</h5>
+                        {% if user.is_admin %}
+                            <span class="badge bg-warning">Administrador</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-8">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="150">Usuário:</th>
+                                <td>{{ user.username }}</td>
+                            </tr>
+                            <tr>
+                                <th>E-mail:</th>
+                                <td>{{ user.email }}</td>
+                            </tr>
+                            <tr>
+                                <th>Membro desde:</th>
+                                <td>{{ user.created_at.strftime('%d/%m/%Y') if user.created_at else 'N/A' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Último login:</th>
+                                <td>{{ user.last_login.strftime('%d/%m/%Y %H:%M') if user.last_login else 'Nunca' }}</td>
+                            </tr>
+                        </table>
+                        
+                        <hr>
+                        
+                        <h5 class="mb-3">Alterar Senha</h5>
+                        <form action="{{ url_for('auth.change_password') }}" method="post">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Senha atual</label>
+                                <input type="password" name="current_password" class="form-control" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Nova senha</label>
+                                <input type="password" name="new_password" class="form-control" required minlength="6">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Confirmar nova senha</label>
+                                <input type="password" name="confirm_password" class="form-control" required>
+                            </div>
+                            
+                            <button type="submit" class="btn" style="background: linear-gradient(135deg, #F28C33 0%, #FFB366 100%); color: white;">
+                                <i class="bi bi-key"></i> Alterar senha
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
