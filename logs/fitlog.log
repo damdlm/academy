@@ -1,3 +1,0 @@
-2026-02-25 09:08:46,531 INFO: FitLog iniciado [in C:\Priorize\app\fit_log\app.py:27]
-2026-02-25 10:30:17,801 INFO: FitLog iniciado [in C:\Priorize\app\fit_log\app.py:27]
-2026-02-25 10:30:17,973 WARNING: Erro ao criar tabelas: 'utf-8' codec can't decode byte 0xe7 in position 78: invalid continuation byte [in C:\Priorize\app\fit_log\app.py:70]
