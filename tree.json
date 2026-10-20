@@ -1,0 +1,60 @@
+{
+  "nodes": [
+    {
+      "id": "root",
+      "parent": null,
+      "title": "Vendas",
+      "file": "",
+      "params": ""
+    },
+    {
+      "id": "fat",
+      "parent": "root",
+      "title": "Faturamento",
+      "file": "Faturamentos.sql",
+      "params": ":DT1  (data inicial da emissão)\n:DT2  (data final da emissão)"
+    },
+    {
+      "id": "ped",
+      "parent": "fat",
+      "title": "Pedido de Venda",
+      "file": "PedidoVenda.sql",
+      "params": ":PKITEM  ← Faturamento.PKITEM\n:P_SOLICITACAO  ← Faturamento.P_SOLICITACAO"
+    },
+    {
+      "id": "os",
+      "parent": "fat",
+      "title": "Ordem de Serviço",
+      "file": "OrdemServico.sql",
+      "params": ":PKNOTADOCTO  ← Faturamento.PKNOTADOCTO\n:P_SOLICITACAO  ← Faturamento.P_SOLICITACAO"
+    },
+    {
+      "id": "orc",
+      "parent": "ped",
+      "title": "Orçamento de Venda",
+      "file": "OrcamentoVenda.sql",
+      "params": ":PKORIGEM  ← Pedido de Venda.PKORIGEM"
+    },
+    {
+      "id": "op",
+      "parent": "ped",
+      "title": "Ordem de Produção",
+      "file": "OrdemProducao.sql",
+      "params": ":PKITEM  ← Pedido de Venda.PKITEM\n:P_SOLICITACAO  ← Pedido de Venda.P_SOLICITACAO"
+    },
+    {
+      "id": "proc",
+      "parent": "op",
+      "title": "Processos da OP",
+      "file": "ProcessoOP.sql",
+      "params": ":PKORDEMPRODUCAO  ← Ordem de Produção.PKORDEMPRODUCAO"
+    },
+    {
+      "id": "ins",
+      "parent": "op",
+      "title": "Insumos da OP",
+      "file": "InsumosOP.sql",
+      "params": ":FKORDEMPRODUCAO  ← Ordem de Produção.PKORDEMPRODUCAO"
+    }
+  ]
+}

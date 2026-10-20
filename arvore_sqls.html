@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Árvore de SQLs</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1d2330;--mut:#667085;--line:#9aa3b2;--bd:#d7dce5;--acc:#2457d6;--accbg:#e8eefc;--ok:#15803d;--warn:#b45309;--root:#1d2330}
+@media (prefers-color-scheme:dark){:root{--bg:#12151c;--card:#1b2030;--ink:#e6e9f0;--mut:#98a2b3;--line:#566074;--bd:#2d3447;--acc:#7aa2ff;--accbg:#22305a;--ok:#4ade80;--warn:#fbbf24;--root:#e6e9f0}}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--bd);background:var(--card)}
+header h1{font-size:18px;margin:0}
+.hr{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#folder{font-size:12px;color:var(--mut)}#folder.on{color:var(--ok)}
+main{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(360px,1fr);gap:16px;padding:16px 20px;align-items:start}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+section{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px}
+h2{font-size:13px;margin:0 0 10px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+.hint{color:var(--mut);font-size:12px;margin:0 0 8px}
+.treewrap{overflow:auto;padding-bottom:8px}
+.tree{display:inline-block;min-width:100%}
+.tree ul{display:flex;justify-content:center;padding:28px 0 0;margin:0;position:relative}
+.tree li{list-style:none;text-align:center;position:relative;padding:28px 8px 0}
+.tree li::before,.tree li::after{content:'';position:absolute;top:0;right:50%;border-top:1px solid var(--line);width:50%;height:28px}
+.tree li::after{right:auto;left:50%;border-left:1px solid var(--line)}
+.tree li:only-child::before,.tree li:only-child::after{display:none}
+.tree li:only-child{padding-top:0}
+.tree li:first-child::before,.tree li:last-child::after{border:0 none}
+.tree li:last-child::before{border-right:1px solid var(--line);border-radius:0 6px 0 0}
+.tree li:first-child::after{border-radius:6px 0 0 0}
+.tree ul ul::before{content:'';position:absolute;top:0;left:50%;border-left:1px solid var(--line);height:28px}
+.tree>ul{padding-top:0}.tree>ul>li{padding-top:0}.tree>ul>li::before,.tree>ul>li::after{display:none}
+.node{position:relative;display:inline-block;min-width:140px;max-width:190px;padding:8px 28px 8px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--card);cursor:pointer;text-align:left}
+.node:hover{border-color:var(--acc)}
+.node.sel{border-color:var(--acc);box-shadow:0 0 0 2px var(--accbg);background:var(--accbg)}
+.node.miss{border-style:dashed}
+.node b{display:block;font-size:13px}
+.node small{display:block;color:var(--mut);font-size:11px;word-break:break-all}
+.node.root{border-radius:999px;background:var(--root);color:var(--bg);border-color:var(--root);text-align:center;min-width:90px}
+.add{position:absolute;top:4px;right:4px;width:20px;height:20px;padding:0;line-height:1;border:1px solid var(--bd);border-radius:50%;background:var(--card);color:var(--acc);font-size:15px;cursor:pointer}
+.add:hover{background:var(--acc);color:#fff;border-color:var(--acc)}
+label{display:block;font-size:12px;font-weight:600;color:var(--mut);margin:12px 0 3px}
+input,textarea{width:100%;font:inherit;padding:6px 8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--ink)}
+textarea{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;resize:vertical}
+#params{min-height:70px}
+#sql{min-height:340px;white-space:pre;tab-size:4}
+.path{font:12px ui-monospace,Menlo,Consolas,monospace;color:var(--mut);word-break:break-all}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px}
+button.b{font:inherit;padding:6px 14px;border:1px solid var(--bd);background:var(--card);color:var(--ink);border-radius:8px;cursor:pointer}
+button.b:hover{border-color:var(--acc);color:var(--acc)}
+button.b.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+button.b.danger:hover{border-color:#dc2626;color:#dc2626}
+button.b.sm{padding:2px 9px;font-size:12px}
+#status{font-size:12px;color:var(--mut)}
+#status.ok{color:var(--ok)}#status.dirty{color:var(--warn)}#status.err{color:#dc2626}
+.lbl{display:flex;justify-content:space-between;align-items:flex-end}
+.empty{color:var(--mut)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Árvore de SQLs</h1>
+  <div class="hr">
+    <span id="folder">Nenhuma pasta conectada</span>
+    <button class="b sm" id="pick" type="button">Escolher pasta da aplicação</button>
+    <button class="b sm" id="writeAll" type="button" hidden>Gravar todos na pasta</button>
+    <button class="b sm" id="exp" type="button">Exportar JSON (com SQLs)</button>
+    <button class="b sm" id="imp" type="button">Importar JSON</button>
+  </div>
+</header>
+<main>
+  <section>
+    <h2>Árvore</h2>
+    <p class="hint">Clique numa consulta para ver os detalhes. Use o <b>+</b> do nó para adicionar uma consulta abaixo dele. Borda tracejada = arquivo não encontrado na pasta.</p>
+    <div class="treewrap"><div class="tree" id="tree"></div></div>
+  </section>
+
+  <section>
+    <h2>Detalhes da consulta</h2>
+    <div id="empty" class="empty">Selecione um nó da árvore.</div>
+    <div id="form" hidden>
+      <label for="title">Nome da consulta</label>
+      <input id="title">
+      <div id="fileBox">
+        <label for="file">Arquivo</label>
+        <input id="file" placeholder="NomeDoArquivo.sql">
+        <div class="path" id="path"></div>
+        <div class="lbl"><label for="params">Parâmetros de entrada</label>
+          <button class="b sm" id="detect" type="button">Detectar do SQL</button></div>
+        <textarea id="params" spellcheck="false" placeholder=":PARAMETRO"></textarea>
+        <label for="sql">SQL completo</label>
+        <textarea id="sql" spellcheck="false" wrap="off"></textarea>
+      </div>
+      <div class="row">
+        <button class="b primary" id="save">Salvar</button>
+        <button class="b" id="load" type="button">Carregar</button>
+        <button class="b" id="add">+ Adicionar consulta filha</button>
+        <button class="b" id="dl" type="button">Baixar .sql</button>
+        <button class="b danger" id="del">Excluir nó</button>
+        <span id="status"></span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* O HTML guarda só a ESTRUTURA da árvore (nome, arquivo, parâmetros).
+   O SQL vem sempre dos arquivos .sql da pasta conectada. */
+const SEED = {"nodes": [{"id": "root", "parent": null, "title": "Vendas", "file": "", "params": ""}, {"id": "fat", "parent": "root", "title": "Faturamento", "file": "Faturamentos.sql", "params": ":DT1  (data inicial da emissão)\n:DT2  (data final da emissão)"}, {"id": "ped", "parent": "fat", "title": "Pedido de Venda", "file": "PedidoVenda.sql", "params": ":PKITEM  ← Faturamento.PKITEM\n:P_SOLICITACAO  ← Faturamento.P_SOLICITACAO"}, {"id": "os", "parent": "fat", "title": "Ordem de Serviço", "file": "OrdemServico.sql", "params": ":PKNOTADOCTO  ← Faturamento.PKNOTADOCTO\n:P_SOLICITACAO  ← Faturamento.P_SOLICITACAO"}, {"id": "orc", "parent": "ped", "title": "Orçamento de Venda", "file": "OrcamentoVenda.sql", "params": ":PKORIGEM  ← Pedido de Venda.PKORIGEM"}, {"id": "op", "parent": "ped", "title": "Ordem de Produção", "file": "OrdemProducao.sql", "params": ":PKITEM  ← Faturamento.PKITEM\n:P_SOLICITACAO  ← Faturamento.P_SOLICITACAO"}, {"id": "proc", "parent": "op", "title": "Processos da OP", "file": "ProcessoOP.sql", "params": ":PKORDEMPRODUCAO  ← Ordem de Produção.PKORDEMPRODUCAO"}, {"id": "ins", "parent": "op", "title": "Insumos da OP", "file": "InsumosOP.sql", "params": ":FKORDEMPRODUCAO  ← Ordem de Produção.PKORDEMPRODUCAO"}]};
+const LS_KEY = 'arvore-sqls-estrutura-v2';
+const $ = s => document.querySelector(s);
+let nodes = [], sel = null, dirty = false, dir = null, pendingHandle = null;
+
+/* ---------------------------------------------------------- utilidades */
+function el(tag, cls, text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e}
+function status(msg, cls=''){const s=$('#status');s.textContent=msg;s.className=cls}
+function setDirty(v){dirty=v;if(v)status('● alterações não salvas','dirty')}
+const byId = id => nodes.find(n => n.id === id);
+const newId = () => Math.random().toString(36).slice(2, 10);
+function cleanName(name, fallback){
+  let n=(name||'').trim().replace(/[\\/]/g,'_').replace(/[^\w.\-À-ÿ]+/g,'_').replace(/^\.+/,'');
+  if(!n) n=(fallback||'consulta').replace(/[^\w\-À-ÿ]+/g,'_');
+  if(!/\.sql$/i.test(n)) n+='.sql';
+  return n;
+}
+function uniqueName(name, ignoreId){
+  const taken=new Set(nodes.filter(n=>n.id!==ignoreId&&n.file).map(n=>n.file.toLowerCase()));
+  const m=name.match(/^(.*?)(\.sql)$/i); let cand=name, i=2;
+  while(taken.has(cand.toLowerCase())) cand=`${m[1]}_${i++}${m[2]}`;
+  return cand;
+}
+function detectParams(sql){
+  const s=sql.replace(/\/\*[\s\S]*?\*\//g,' ').replace(/--[^\n]*/g,' ')
+             .replace(/'(?:[^']|'')*'/g,"''").replace(/"[^"]*"/g,'""');
+  const out=[]; for(const m of s.matchAll(/(?<![:\w]):([A-Za-z_]\w*)/g)) if(!out.includes(m[1])) out.push(m[1]);
+  return out;
+}
+const descendants = id => nodes.filter(n=>n.parent===id).flatMap(n=>[n.id,...descendants(n.id)]);
+function download(name,text,type){
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),500);
+}
+
+/* ------------------------------------------------------------ persistência */
+// Estrutura (sem SQL) — no navegador e em tree.json
+const structure = () => nodes.map(({id,parent,title,file,params})=>({id,parent,title,file,params}));
+function persistLocal(){try{localStorage.setItem(LS_KEY,JSON.stringify(structure()))}catch(e){}}
+function loadLocal(){try{const s=localStorage.getItem(LS_KEY);if(s)return JSON.parse(s)}catch(e){}return null}
+const treeJson = () => JSON.stringify({nodes:structure()},null,2);
+
+async function writeFile(name,text){
+  const fh=await dir.getFileHandle(name,{create:true});
+  const w=await fh.createWritable(); await w.write(text); await w.close();
+}
+async function readFile(name){            // null = não existe
+  try{return await (await (await dir.getFileHandle(name)).getFile()).text()}catch(e){return null}
+}
+async function loadAllSql(){              // lê todos os .sql existentes na pasta
+  let found=0;
+  for(const n of nodes){
+    if(!n.file) continue;
+    const t=await readFile(n.file);
+    n._found = t!==null; n.sql = t ?? ''; if(t!==null) found++;
+  }
+  return found;
+}
+
+/* handle da pasta guardado no navegador para reconectar sem escolher de novo */
+const idb={
+  open(){return new Promise((res,rej)=>{const r=indexedDB.open('arvore-sqls',1);r.onupgradeneeded=()=>r.result.createObjectStore('h');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
+  async get(){try{const db=await this.open();return await new Promise(res=>{const q=db.transaction('h').objectStore('h').get('dir');q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null)})}catch(e){return null}},
+  async set(h){try{const db=await this.open();await new Promise(res=>{const t=db.transaction('h','readwrite');t.objectStore('h').put(h,'dir');t.oncomplete=()=>res();t.onerror=()=>res()})}catch(e){}}
+};
+
+/* ----------------------------------------------------------------- árvore */
+function card(n){
+  const d=el('div','node'+(n.parent?'':' root')+(n.id===sel?' sel':'')+(dir&&n.file&&n._found===false?' miss':''));
+  d.appendChild(el('b','',n.title));
+  if(n.file) d.appendChild(el('small','',n.file));
+  const plus=el('button','add','+'); plus.title='Adicionar consulta filha';
+  plus.onclick=e=>{e.stopPropagation();addChild(n.id)};
+  d.appendChild(plus); d.onclick=()=>select(n.id); return d;
+}
+function branch(n){
+  const li=el('li'); li.appendChild(card(n));
+  const kids=nodes.filter(x=>x.parent===n.id);
+  if(kids.length){const ul=el('ul');kids.forEach(k=>ul.appendChild(branch(k)));li.appendChild(ul)}
+  return li;
+}
+function renderTree(){
+  const root=nodes.find(n=>!n.parent); const ul=el('ul'); ul.appendChild(branch(root));
+  $('#tree').replaceChildren(ul);
+}
+
+/* --------------------------------------------------------------- detalhes */
+function pathText(n){
+  if(!n.file) return '';
+  if(!dir) return `Arquivo: ${n.file} — conecte a pasta da aplicação para carregar/gravar`;
+  return n._found===false
+    ? `${dir.name}/${n.file} — não existe na pasta (será criado ao salvar)`
+    : `Salvo em: ${dir.name}/${n.file}`;
+}
+function select(id, force=false){
+  if(!force&&dirty&&!confirm('Há alterações não salvas. Descartar?')) return;
+  const n=byId(id); sel=id; dirty=false;
+  $('#empty').hidden=true; $('#form').hidden=false;
+  const isRoot=!n.parent;
+  $('#fileBox').hidden=isRoot; $('#del').hidden=isRoot; $('#dl').hidden=isRoot; $('#load').hidden=isRoot;
+  $('#title').value=n.title; $('#file').value=n.file||'';
+  $('#params').value=n.params||''; $('#sql').value=n.sql||'';
+  $('#path').textContent=pathText(n); status('');
+  renderTree();
+}
+async function save(){
+  if(!sel) return; const n=byId(sel); const old=n.file;
+  const title=$('#title').value.trim()||n.title;
+  let file=n.file, sql=n.sql, params=n.params;
+  if(n.parent){
+    file=uniqueName(cleanName($('#file').value,title),n.id);
+    sql=$('#sql').value; params=$('#params').value;
+    if(dir){
+      // proteção: não sobrescrever arquivo existente que não foi carregado / com vazio
+      const ex=await readFile(file);
+      const known=n._found===true && old===file;
+      if(ex!==null && ex!==sql && (!known || !sql.trim()) &&
+         !confirm(`O arquivo ${file} já existe na pasta e é diferente do SQL da tela.\nSobrescrever?\n(Dica: use "Carregar" para trazer o conteúdo do arquivo.)`)) return;
+    }
+  }
+  Object.assign(n,{title,file,sql,params});
+  persistLocal();
+  let msg='✓ estrutura salva no navegador (conecte a pasta para gravar o .sql)', cls='ok';
+  if(dir){
+    try{
+      if(n.parent){ await writeFile(file,sql); n._found=true;
+        if(old&&old!==file&&!nodes.some(x=>x.id!==n.id&&x.file===old)) await dir.removeEntry(old).catch(()=>{}); }
+      await writeFile('tree.json',treeJson());
+      msg=`✓ salvo em ${dir.name}/${n.parent?file:'tree.json'}`;
+    }catch(e){msg='Erro ao gravar na pasta: '+e.message;cls='err'}
+  }
+  select(sel,true); status(msg,cls);
+}
+async function loadFile(){
+  const n=byId(sel); if(!n||!n.parent) return;
+  const name=cleanName($('#file').value,n.title);
+  if(dir){
+    const t=await readFile(name);
+    if(t===null){ n._found=false; renderTree(); $('#path').textContent=`${dir.name}/${name} — não existe na pasta`; status(`Arquivo ${name} não encontrado em ${dir.name}`,'err'); return; }
+    if($('#sql').value && $('#sql').value!==t && !confirm('Substituir o SQL da tela pelo conteúdo do arquivo?')) return;
+    $('#sql').value=t; n.sql=t; n.file=name; n._found=true;
+    $('#path').textContent=pathText(n); renderTree();
+    if(dirty) status('● SQL carregado; há outras alterações não salvas','dirty'); else status(`✓ carregado de ${dir.name}/${name}`,'ok');
+  } else {
+    const inp=document.createElement('input'); inp.type='file'; inp.accept='.sql,.txt';
+    inp.onchange=async()=>{ if(!inp.files[0]) return;
+      $('#sql').value=await inp.files[0].text(); $('#file').value=inp.files[0].name; setDirty(true); };
+    inp.click();
+  }
+}
+function addChild(parentId){
+  if(dirty&&!confirm('Há alterações não salvas. Descartar?')) return;
+  const n={id:newId(),parent:parentId,title:'Nova consulta',file:uniqueName('NovaConsulta.sql'),params:'',sql:'',_found:false};
+  nodes.push(n); persistLocal();
+  if(dir) writeFile('tree.json',treeJson()).catch(()=>{});   // o .sql só é criado ao salvar
+  select(n.id,true); $('#title').focus(); $('#title').select();
+}
+async function del(){
+  const n=byId(sel);
+  if(!n||!confirm(`Excluir "${n.title}" e os nós abaixo dele da árvore?\nOs arquivos .sql permanecem na pasta.`)) return;
+  const gone=new Set([sel,...descendants(sel)]); const parent=n.parent;
+  nodes=nodes.filter(x=>!gone.has(x.id)); persistLocal();
+  if(dir) await writeFile('tree.json',treeJson()).catch(()=>{});
+  select(parent,true);
+}
+function detect(){
+  const cur=$('#params').value.split('\n');
+  $('#params').value=detectParams($('#sql').value).map(p=>cur.find(l=>l.trim().startsWith(':'+p))||':'+p).join('\n');
+  setDirty(true);
+}
+
+/* ------------------------------------------------------------ pasta / JSON */
+function folderUi(){
+  const f=$('#folder');
+  if(dir){f.textContent='Pasta conectada: '+dir.name;f.classList.add('on')}
+  else{f.textContent='Nenhuma pasta conectada';f.classList.remove('on')}
+  $('#writeAll').hidden=!dir;
+}
+async function connect(handle, silent){
+  dir=handle; pendingHandle=null; idb.set(handle); folderUi(); $('#pick').textContent='Trocar pasta';
+  const tj=await readFile('tree.json');
+  if(tj && (silent || confirm(`A pasta "${dir.name}" já tem uma árvore (tree.json).\nOK = usar a árvore da pasta.\nCancelar = manter a árvore atual da tela e gravá-la na pasta.`))){
+    try{ nodes=JSON.parse(tj).nodes; persistLocal(); }catch(e){alert('tree.json inválido: '+e.message)}
+  }
+  const found=await loadAllSql();
+  try{ await writeFile('tree.json',treeJson()); }catch(e){}
+  const cur=byId(sel)||nodes.find(n=>n.parent)||nodes[0];
+  select(cur.id,true);
+  const total=nodes.filter(n=>n.file).length;
+  status(`✓ ${found} de ${total} arquivos .sql carregados de ${dir.name}`, found===total?'ok':'dirty');
+}
+async function pickFolder(){
+  if(pendingHandle){
+    try{ if(await pendingHandle.requestPermission({mode:'readwrite'})==='granted'){ await connect(pendingHandle,true); return; } }catch(e){}
+  }
+  if(!window.showDirectoryPicker){alert('Seu navegador não permite acessar pastas. Use Chrome ou Edge; aqui você ainda pode usar "Carregar" (escolher o arquivo) e "Baixar .sql".');return}
+  let h; try{ h=await window.showDirectoryPicker({mode:'readwrite'}) }catch(e){return}
+  await connect(h,false);
+}
+async function writeAllFiles(){
+  if(!confirm(`Gravar todos os SQLs carregados em "${dir.name}"?\nArquivos existentes serão sobrescritos.`)) return;
+  let w=0;
+  try{
+    for(const n of nodes){
+      if(!n.file||n.sql===undefined) continue;
+      if(n.sql===''&&n._found) continue;      // nunca zera um arquivo existente
+      await writeFile(n.file,n.sql); n._found=true; w++;
+    }
+    await writeFile('tree.json',treeJson());
+    renderTree(); status(`✓ ${w} arquivos gravados em ${dir.name}`,'ok');
+  }catch(e){status('Erro ao gravar: '+e.message,'err')}
+}
+
+$('#pick').onclick=pickFolder;
+$('#writeAll').onclick=writeAllFiles;
+$('#exp').onclick=()=>download('arvore-sqls.json',JSON.stringify({nodes:nodes.map(n=>({...structure().find(s=>s.id===n.id),sql:n.sql||''}))},null,2),'application/json');
+$('#imp').onclick=()=>{
+  const f=document.createElement('input');f.type='file';f.accept='.json';
+  f.onchange=()=>{const r=new FileReader();r.onload=()=>{
+    try{const d=JSON.parse(r.result).nodes; if(!Array.isArray(d)||!d.some(n=>!n.parent))throw 0;
+      nodes=d.map(n=>({...n,_found:undefined})); persistLocal();
+      select(nodes.find(n=>n.parent)?.id||'root',true);
+      status(dir?'✓ JSON importado — use "Gravar todos na pasta" para criar os arquivos':'✓ JSON importado (SQLs só em memória; conecte uma pasta e grave)','ok');}
+    catch(e){alert('JSON inválido')}};r.readAsText(f.files[0])};
+  f.click();
+};
+$('#dl').onclick=()=>{const n=byId(sel);download(cleanName($('#file').value,n.title),$('#sql').value,'text/plain')};
+['title','file','params','sql'].forEach(id=>$('#'+id).addEventListener('input',()=>setDirty(true)));
+$('#save').onclick=save; $('#load').onclick=loadFile; $('#add').onclick=()=>addChild(sel); $('#del').onclick=del; $('#detect').onclick=detect;
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();save()}});
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
+
+/* ---------------------------------------------------------------- início */
+nodes = loadLocal() || JSON.parse(JSON.stringify(SEED.nodes));
+renderTree(); select(nodes.find(n=>n.parent)?.id||'root',true);
+(async()=>{                     // tenta reconectar a última pasta usada
+  const h=await idb.get(); if(!h) return;
+  try{
+    if(await h.queryPermission({mode:'readwrite'})==='granted') await connect(h,true);
+    else { pendingHandle=h; $('#pick').textContent='Reconectar pasta "'+h.name+'"'; }
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
